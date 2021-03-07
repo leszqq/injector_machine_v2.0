@@ -8,16 +8,17 @@
  *      It is intended to use along with HAL drivers.
  *
  *      HOW TO USE
- *      To initialize expander, create struct GPIO_exp_init_t and assign
- *      suitable fields. Then, call the GPIO_expander_init() function.
+ *      Set application specific fields by calling the GPIO_expander_init() function.
  *
- *      Insert GPIO_expander_process() function inside main loop.
- *      Assign tasks to be done at GPIO_expander_process() call with API functions.
+ *      Set task using FIFO mode API functions and insert GPIO_expander_process()
+ *      function inside main loop to attempt execute them using DMA once resources are available.
  *
+ *      You can also use functions in polling mode to force assignments immediately.
  */
 
 #ifndef APP_INC_GPIO_EXPANDER_H_
 #define APP_INC_GPIO_EXPANDER_H_
+
 
 
 /* == includes == */
@@ -28,12 +29,9 @@
 /* == exported types == */
 enum GPIO_expander_status {
     GPIO_EXPANDER_OK = 0,
+    GPIO_EXPANDER_BUSY,
+    GPIO_EXPANDER_QUEUE_FULL,
     GPIO_EXPANDER_ERROR
-};
-
-enum GPIO_expander_mode {
-    GPIO_EXPANDER_MODE_BLOCKING = 0,
-    GPIO_EXPANDER_MODE_FIFO
 };
 
 
@@ -41,12 +39,13 @@ enum GPIO_expander_mode {
 
 /**
  * @brief initialization function
- * @param hspi          -   pointer to SPI connected with MCP23S08 handle
- * @param CS_pin_port   -   CS pin port
- * @param CS_pin        -   CS pin
+ * @param hspi           -   pointer to SPI connected with MCP23S08 handle
+ * @param device_address -   address of the expander dev
+ * @param CS_pin_port    -   CS pin port
+ * @param CS_pin         -   CS pin
  * @retval enum status
  */
-void GPIO_expander_init(SPI_HandleTypeDef* hspi, GPIO_TypeDef CS_pin_port, uint16_t CS_pin);
+void GPIO_expander_init(SPI_HandleTypeDef* hspi, uint8_t device_address, GPIO_TypeDef *CS_pin_port, uint16_t CS_pin);
 
 /**
  * @brief this is the process executing tasks assigned with API functions below.
@@ -58,15 +57,19 @@ enum GPIO_expander_status GPIO_expander_process();
 
 /* == API functions == */
 /**
- * @brief write expander output pins GP7-GP0
+ * @brief Assign task in FIFO queue to write expander output pins GP7-GP0 on GPIO_expander_process() call,
  * @param byte - value to write to GP7-GP0 pins
- * @param mode - GPIO_EXPANDER_MODE_BLOCKING:
- *                  wait until SPI peripheral is not busy and write expander outputs.
- *               GPIO_EXPANDER_MODE_FIFO:
- *                  try to send data if SPI is not busy, else store the task to FIFO
- *                  and make an attempt to execute at GPIO_expander_process() call.
  * @retval enum status
  */
-enum GPIO_expander_status GPIO_expander_write_outputs(uint8_t byte, enum GPIO_expander_mode mode);
+enum GPIO_expander_status GPIO_expander_FIFO_write(uint8_t byte);
+
+/**
+ * @brief write expander output pins GP7-GP0 in polling mode.
+ * @retval enum status
+ * @param byte - value to write to GP7-GP0 pins
+ * @param timeout - maximum time of expectancy for SPI peripheral availability
+ * @retval enum status
+ */
+enum GPIO_expander_status GPIO_expander_write(uint8_t byte, uint16_t timeout);
 
 #endif /* APP_INC_GPIO_EXPANDER_H_ */
