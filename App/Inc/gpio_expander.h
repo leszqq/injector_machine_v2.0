@@ -10,10 +10,10 @@
  *      HOW TO USE
  *      Set application specific fields by calling the GPIO_expander_init() function.
  *
- *      Set task using FIFO mode API functions and insert GPIO_expander_process()
- *      function inside main loop to attempt execute them using DMA once resources are available.
+ *      Push desired GPIO output sequence in FIFO mode and insert GPIO_expander_process()
+ *      function inside main loop to attempt transmitting data to MCP expander using DMA once resources are available.
  *
- *      You can also use functions in polling mode to force assignments immediately.
+ *      You can also use polling mode function to write expander outputs.
  */
 
 #ifndef APP_INC_GPIO_EXPANDER_H_

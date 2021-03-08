@@ -11,7 +11,7 @@
 #include <stdbool.h>
 
 /* == private defines == */
-#define WRITE_BUFFER_SIZE                       1440
+#define WRITE_BUFFER_SIZE                       1440                                // adjust this if you like
 #define AUX_TAB_SIZE                               3
 
 
@@ -26,8 +26,8 @@ enum IC_register {
 };
 
 struct Write_buffer {
-    uint8_t                         amount_to_send;              // amount of writes ( register byte + data byte pairs)
-    uint8_t                         queue[WRITE_BUFFER_SIZE];    // bytes and their destination expander registers pairs
+    uint8_t                         amount_to_send;                                 // amount of writes ( register byte + data byte pairs)
+    uint8_t                         queue[WRITE_BUFFER_SIZE];                       // bytes and their destination expander registers pairs
 };
 
 struct Aux_tab {
@@ -92,8 +92,8 @@ void GPIO_expander_init(SPI_HandleTypeDef* hspi, uint8_t device_address, GPIO_Ty
 
     /* initialize empty write buffer */
     struct Write_buffer buff = {
-            .amount_to_send = 0,
-            .queue = {0}
+            .amount_to_send = 2,
+            .queue = {device_address, OLAT, 0}
     };
     base.write_buffer = buff;
 
@@ -118,9 +118,7 @@ enum GPIO_expander_status GPIO_expander_FIFO_write(uint8_t byte)
     int next_index = buff->amount_to_send;
     if(next_index >= WRITE_BUFFER_SIZE - 1) return GPIO_EXPANDER_QUEUE_FULL;
 
-    /* push write to OLAT register of expander on queue */
-    buff->queue[next_index++] = base.device_address;
-    buff->queue[next_index++] = OLAT;
+    /* push byte to write on queue */
     buff->queue[next_index++] = byte;
     buff->amount_to_send = next_index;
     return GPIO_EXPANDER_OK;
@@ -140,22 +138,22 @@ enum GPIO_expander_status GPIO_expander_write(uint8_t byte)
 enum GPIO_expander_status GPIO_expander_process(){
     /* start DMA transmission if write buffer is not empty and SPI peripheral is not busy */
     struct Write_buffer *buff = &base.write_buffer;
-    if(buff->amount_to_send > 0){
+    if(buff->amount_to_send > 2){
         if(base.hspi->State == HAL_SPI_STATE_BUSY) return GPIO_EXPANDER_BUSY;
 
         HAL_StatusTypeDef status = HAL_OK;
         HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_RESET);
         status = HAL_SPI_Transmit_DMA(base.hspi, buff->queue, buff->amount_to_send);
 
-        if(status == HAL_OK) buff->amount_to_send = 0;
+        if(status == HAL_OK) buff->amount_to_send = 2;                                  // firt 2 bytes of queue are device and register addresses
         return resolve_status(status);
     } else {
         return GPIO_EXPANDER_OK;
     }
-    return GPIO_EXPANDER_ERROR;     // TODO
+    return GPIO_EXPANDER_ERROR;
 }
 
 void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi){
-
+    HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_SET);
 }
 

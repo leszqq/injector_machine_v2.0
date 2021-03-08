@@ -78,7 +78,7 @@ static enum GPIO_expander_status send_nibble(uint8_t nibble, enum message_type t
     enum GPIO_expander_status status = GPIO_EXPANDER_OK;
 
     /* decode expected LCD inputs state and write them */
-    if(type == COMMAND) temp |= base.res_tab.RS;
+    if(type == DATA) temp |= base.res_tab.RS;
 
     if(nibble & 0x08) temp |= base.res_tab.D7;
     if(nibble & 0x04) temp |= base.res_tab.D6;
@@ -114,7 +114,7 @@ static enum GPIO_expander_status send_command(enum command com, enum write_mode 
 {
     enum GPIO_expander_status status = GPIO_EXPANDER_OK;
 
-    status = send_nibble((uint8_t)(com) & 0xF0, COMMAND, mode);
+    status = send_nibble(((uint8_t)(com) & 0xF0) >> 4, COMMAND, mode);
     if(status != GPIO_EXPANDER_OK) return status;
 
     status = send_nibble((uint8_t)(com) & 0x0F, COMMAND, mode);
@@ -125,7 +125,7 @@ static enum GPIO_expander_status write_byte(uint8_t byte, enum write_mode mode)
 {
     enum GPIO_expander_status status = GPIO_EXPANDER_OK;
 
-    status = send_nibble(byte & 0xF0, DATA, mode);
+    status = send_nibble((byte & 0xF0) >> 4, DATA, mode);
     if(status != GPIO_EXPANDER_OK) return status;
 
     status = send_nibble(byte & 0x0F, DATA, mode);
@@ -152,6 +152,7 @@ enum GPIO_expander_status lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_addre
     send_nibble((uint8_t)(INIT_SEQ), COMMAND, POLLING);
     send_nibble(0x02, COMMAND, POLLING);
 
+
     status = send_command(DATA_LEN_4B | TWO_LINES | FONT_5x8, POLLING);
     if(status != GPIO_EXPANDER_OK) return status;
 
@@ -160,6 +161,7 @@ enum GPIO_expander_status lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_addre
 
     status = send_command(CLEAR, POLLING);
     if(status != GPIO_EXPANDER_OK) return status;
+    HAL_Delay(2);                                    // let LCD execute clear command
 
     status = send_command(ENTRY_INC | SHIFT_OFF, POLLING);
     if(status != GPIO_EXPANDER_OK) return status;
@@ -197,15 +199,42 @@ enum GPIO_expander_status lcd_write(char *text, uint8_t row, uint8_t col)
 
     address += (col % 20);
     status = send_command(SET_ADDR | address, FIFO);
-    while(text[i] != '\0'){
-        status = write_byte(text[i++], FIFO);
-        if(status != GPIO_EXPANDER_OK) return status;
-    }
-    return GPIO_EXPANDER_OK;
+    if(status != GPIO_EXPANDER_OK) return status;
 
+    while(text[i] != '\0'){
+
+        /* go to next row if next character is '\n' */
+        if(text[i] == '\n'){
+            switch(address){
+            case ROW_0_ADDR:
+                address = ROW_1_ADDR;
+                break;
+            case ROW_1_ADDR:
+                address = ROW_2_ADDR;
+                break;
+            case ROW_2_ADDR:
+                address = ROW_3_ADDR;
+                break;
+            case ROW_3_ADDR:
+            default:
+                address = ROW_0_ADDR;
+                break;
+            }
+            status = send_command(SET_ADDR | address, FIFO);
+            if(status != GPIO_EXPANDER_OK) return status;
+        } else {
+            /* write next character */
+            status = write_byte(text[i], FIFO);
+            if(status != GPIO_EXPANDER_OK) return status;
+        }
+
+        i++;
+    }
+
+    return GPIO_EXPANDER_OK;
 }
 
-/* execute tasks stored in FIFO queue - start DMA based communication with LCD */
+/* write commands and data from FIFO queue - start DMA based communication with LCD */
 enum GPIO_expander_status lcd_process()
 {
     return GPIO_expander_process();

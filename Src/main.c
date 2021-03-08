@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "gpio_expander.h"
 #include "lcd_by_expander.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -104,9 +105,13 @@ int main(void)
           .D7 = GP0
   };
 
+  HAL_Delay(500);
+
   lcd_init(&hspi1, MCP_ADDR, MCP_CS_GPIO_Port, MCP_CS_Pin, res_tab);
-  char text[10] = "1";
-  text[9] = '\0';
+
+  char text[40] = {0};
+  snprintf(text, 40, "Size of char table:\n\n\n%d bytes.", sizeof(text));
+
   lcd_write(text, 0, 0);
   HAL_Delay(100);
 
