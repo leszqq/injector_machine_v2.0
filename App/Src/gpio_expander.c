@@ -11,14 +11,8 @@
 #include <stdbool.h>
 
 /* == private defines == */
-#define WRITE_BUFFER_SIZE                       120
-#define AUX_TAB_SIZE                              3
-
-/* MCP23S08 registers addresses */
-#define MCP_IODIR   0x00
-#define MCP_IOCON   0x05
-#define MCP_OLAT    0x0A
-#define MCP_GPIO    0x09
+#define WRITE_BUFFER_SIZE                       1440
+#define AUX_TAB_SIZE                               3
 
 
 /* == private types == */
