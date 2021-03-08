@@ -64,12 +64,11 @@ enum GPIO_expander_status GPIO_expander_process();
 enum GPIO_expander_status GPIO_expander_FIFO_write(uint8_t byte);
 
 /**
- * @brief write expander output pins GP7-GP0 in polling mode.
+ * @brief write expander output pins GP7-GP0 in polling mode. Timeout is equal to HAL_MAX_DELAY
  * @retval enum status
  * @param byte - value to write to GP7-GP0 pins
- * @param timeout - maximum time of expectancy for SPI peripheral availability
  * @retval enum status
  */
-enum GPIO_expander_status GPIO_expander_write(uint8_t byte, uint16_t timeout);
+enum GPIO_expander_status GPIO_expander_write(uint8_t byte);
 
 #endif /* APP_INC_GPIO_EXPANDER_H_ */

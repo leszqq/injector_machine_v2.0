@@ -87,25 +87,26 @@ static enum GPIO_expander_status send_nibble(uint8_t nibble, enum message_type t
 
     /* write nibble in chosen mode */
     if(mode == POLLING){
-        status = GPIO_expander_write(temp, HAL_MAX_DELAY);
+        status = GPIO_expander_write(temp);
         if(status != GPIO_EXPANDER_OK) return status;
 
-        status = GPIO_expander_write(temp |= base.res_tab.E, HAL_MAX_DELAY);
+        status = GPIO_expander_write(temp | base.res_tab.E);
         if(status != GPIO_EXPANDER_OK) return status;
 
-        status = GPIO_expander_write(temp, HAL_MAX_DELAY);
+        status = GPIO_expander_write(temp);
         return status;
 
     } else if(mode == FIFO) {
         status = GPIO_expander_FIFO_write(temp);
         if(status != GPIO_EXPANDER_OK) return status;
 
-        status = GPIO_expander_FIFO_write(temp |= base.res_tab.E);
+        status = GPIO_expander_FIFO_write(temp | base.res_tab.E);
         if(status != GPIO_EXPANDER_OK) return status;
 
         status = GPIO_expander_FIFO_write(temp);
         return status;
     }
+    return status;
 }
 
 /* push write sequence to expander */
@@ -170,7 +171,7 @@ enum GPIO_expander_status lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_addre
 
 enum GPIO_expander_status lcd_write(char *text, uint8_t row, uint8_t col)
 {
-    if(text != NULL) return GPIO_EXPANDER_ERROR;
+    if(text == NULL) return GPIO_EXPANDER_ERROR;
 
     uint8_t i = 0;
     enum GPIO_expander_status status = GPIO_EXPANDER_OK;
@@ -197,7 +198,7 @@ enum GPIO_expander_status lcd_write(char *text, uint8_t row, uint8_t col)
     address += (col % 20);
     status = send_command(SET_ADDR | address, FIFO);
     while(text[i] != '\0'){
-        status = write_byte(text[i], FIFO);
+        status = write_byte(text[i++], FIFO);
         if(status != GPIO_EXPANDER_OK) return status;
     }
     return GPIO_EXPANDER_OK;

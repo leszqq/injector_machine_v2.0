@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "gpio_expander.h"
+#include "lcd_by_expander.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -92,25 +93,31 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
-  GPIO_expander_init(&hspi1, MCP_ADDR, MCP_CS_GPIO_Port, MCP_CS_Pin);
-  HAL_Delay(10);
-  for(uint8_t i = 0; i < 40; i++){
-      GPIO_expander_FIFO_write(i);
-  }
+  //GPIO_expander_init(&hspi1, MCP_ADDR, MCP_CS_GPIO_Port, MCP_CS_Pin);
+  struct Resolve_table res_tab = {
+          .RW = GP5,
+          .RS = GP6,
+          .E = GP4,
+          .D4 = GP3,
+          .D5 = GP2,
+          .D6 = GP1,
+          .D7 = GP0
+  };
+
+  lcd_init(&hspi1, MCP_ADDR, MCP_CS_GPIO_Port, MCP_CS_Pin, res_tab);
+  char text[10] = "1";
+  text[9] = '\0';
+  lcd_write(text, 0, 0);
+  HAL_Delay(100);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-      HAL_Delay(500);
-
-
       HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-      GPIO_expander_process();
-
-
+      lcd_process();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -156,19 +163,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi){
-    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, SET);
-    hspi->TxXferCount = 0U;
-    hspi->State = HAL_SPI_STATE_READY;
-//
-//    /* Disable Tx DMA Request */
-//        CLEAR_BIT(hspi->Instance->CR2, SPI_CR2_TXDMAEN);
-//
-//
-//        hspi->TxXferCount = 0U;
-//        hspi->State = HAL_SPI_STATE_READY;
 
-}
 
 
 /* USER CODE END 4 */

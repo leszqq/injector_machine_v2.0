@@ -38,7 +38,7 @@ enum expander_pin {
 
 /* instantiate this struct, initialize it with enum expander_pin and pass to init_lcd() */
 struct Resolve_table {
-    uint8_t E, RS, RW, D7, D6, D5, D4;
+    enum expander_pin E, RS, RW, D7, D6, D5, D4;
 };
 
 
