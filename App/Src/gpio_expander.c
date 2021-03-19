@@ -9,6 +9,8 @@
 /* == includes == */
 #include "gpio_expander.h"
 #include <stdbool.h>
+#include "it_guard.h"
+
 
 /* == private defines == */
 #define WRITE_BUFFER_SIZE                       1440                                // adjust this if you like
@@ -49,21 +51,24 @@ static struct GPIO_expander {
 /* == static functions == */
 
 /* write register in polling mode */
-HAL_StatusTypeDef write_reg(enum IC_register reg, uint8_t data){
+static HAL_StatusTypeDef write_reg(enum IC_register reg, uint8_t data){
     /* prepare bytes sequence */
     base.aux_tab.data[0] = base.device_address;
     base.aux_tab.data[1] = (uint8_t) reg;
     base.aux_tab.data[2] = data;
 
     /* try transmitting it via SPI*/
+
+    IT_GUARD_START
     HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_RESET);
     HAL_StatusTypeDef err_code = HAL_SPI_Transmit(base.hspi, base.aux_tab.data, 3, HAL_MAX_DELAY);
     HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_SET);
+    IT_GUARD_END
 
     return err_code;
 }
 
-enum GPIO_expander_status resolve_status(HAL_StatusTypeDef status)
+static enum GPIO_expander_status resolve_status(HAL_StatusTypeDef status)
 {
     switch(status){
     case HAL_OK:
