@@ -93,6 +93,8 @@ void GPIO_expander_init(SPI_HandleTypeDef* hspi, uint8_t device_address, GPIO_Ty
     base.hspi = hspi;
     base.CS_port = CS_pin_port;
     base.CS_pin = CS_pin;
+    HAL_GPIO_WritePin(CS_pin_port, CS_pin, GPIO_PIN_SET);
+
     base.device_address = device_address;
 
     /* initialize empty write buffer */

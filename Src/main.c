@@ -20,13 +20,16 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
+#include "i2c.h"
 #include "spi.h"
+#include "tim.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "gpio_expander.h"
 #include "lcd_by_expander.h"
+#include "sev_seg_disp.h"
 #include <stdio.h>
 /* USER CODE END Includes */
 
@@ -92,6 +95,8 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_SPI1_Init();
+  MX_I2C2_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
   //GPIO_expander_init(&hspi1, MCP_ADDR, MCP_CS_GPIO_Port, MCP_CS_Pin);
@@ -107,7 +112,10 @@ int main(void)
 
   HAL_Delay(500);
 
-  lcd_init(&hspi1, MCP_ADDR, MCP_CS_GPIO_Port, MCP_CS_Pin, res_tab);
+  lcd_init(&hspi1, MCP_ADDR, CS_MCP_GPIO_Port, CS_MCP_Pin, res_tab);
+  sev_seg_init(&hspi1, 1, CS_MAX_GPIO_Port, CS_MAX_Pin);
+  sev_seg_write(5293);
+
 
   char text[40] = {0};
   snprintf(text, 40, "Size of char table:\n\n\n%d bytes.", sizeof(text));
@@ -119,10 +127,25 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint32_t timestamp = HAL_GetTick();
+  enum sev_seg_digit dig = NONE;
   while (1)
   {
       HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-      lcd_process();
+      if(lcd_process() != GPIO_EXPANDER_OK){
+          __NOP();
+      }
+      if(sev_seg_process() != SEV_SEG_OK){
+          __NOP();
+      }
+
+      if((HAL_GetTick() > timestamp + 1000)){
+          timestamp = HAL_GetTick();
+          dig++;
+          dig %= 5;
+          sev_seg_blink(dig);
+      }
+      HAL_GPIO_TogglePin(TEST_GPIO_Port, TEST_Pin);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

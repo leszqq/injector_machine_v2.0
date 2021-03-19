@@ -103,16 +103,23 @@ static enum sev_seg_status write_reg(enum registers reg, uint8_t byte){
     base.aux_tab[0] = reg;
     base.aux_tab[1] = byte;
 
+
+    if(HAL_SPI_GetState(base.hspi) != HAL_SPI_STATE_READY) return SEV_SEG_BUSY;
+
     IT_GUARD_START
 
+    HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_RESET);
     base.status = resolve_status(HAL_SPI_Transmit(base.hspi, base.aux_tab, 2, base.timeout));
     CHECK(base.status == SEV_SEG_OK);
+    HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_SET);
 
     IT_GUARD_END
     return SEV_SEG_OK;
 
+
 error:
     IT_GUARD_END
+    HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_SET);
     return base.status;
 }
 
@@ -170,6 +177,10 @@ enum sev_seg_status sev_seg_init(SPI_HandleTypeDef* hspi, uint32_t timeout, GPIO
     base.blinking_digit = NONE;
     base.blink_flag = true;
     base.hspi = hspi;
+
+    base.CS_port = CS_port;
+    base.CS_pin = CS_pin;
+    HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
 
 
     memset(base.aux_tab, 0, AUX_TAB_SIZE);
@@ -239,13 +250,16 @@ enum sev_seg_status sev_seg_write(uint16_t number){
         CHECK( write_digit(DIGIT_1, temp, blank_flag) == SEV_SEG_OK );
     }
 
-    get_digit(number, UNITS);
+    temp = get_digit(number, UNITS);
     blank_flag = false;                                                     // always display unit digit
 
     /* check if new unit digit is different from already displayed */
     if(temp != get_digit(base.number, UNITS) ){
-        CHECK( write_digit(DIGIT_1, temp, blank_flag) == SEV_SEG_OK );
+        CHECK( write_digit(DIGIT_0, temp, blank_flag) == SEV_SEG_OK );
     }
+
+    /* update currently displayed number copy in base struct */
+    base.number = number;
 
     return SEV_SEG_OK;
 
@@ -294,8 +308,9 @@ enum sev_seg_status sev_seg_process(){
 
     /* send next data from buffer */
     if(base.buff.amount_to_send != 0){
-        CHECK(write_reg(base.buff.r_b_pairs[base.buff.amount_to_send].reg,
-                        base.buff.r_b_pairs[base.buff.amount_to_send].byte) == SEV_SEG_OK);
+        CHECK(write_reg(base.buff.r_b_pairs[base.buff.amount_to_send-1].reg,
+                        base.buff.r_b_pairs[base.buff.amount_to_send-1].byte) == SEV_SEG_OK);
+
         base.buff.amount_to_send--;
         if(base.status == SEV_SEG_FULL) base.status = SEV_SEG_OK;
     }

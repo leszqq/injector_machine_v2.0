@@ -7,7 +7,10 @@
  *      This file containt code for displaying four digits on 7-segment display via MAX7219 IC.
  *      Blinking is implemented as well.
  *
- *      Push commands to send using sev_seg_write() and sev_seg_blink() functions.
+ *      Push commands sequence to send using sev_seg_write() and sev_seg_blink() functions.
+ *      There is no difference of what is the precedence of commands, so they are stored in stack
+ *      and pop from it one by one by sev_seg_process() function.
+ *
  *      sev_seg_init() initializes IC and display in pooling mode
  *
  *      put sev_seg_process() function inside main loop to execute task set with another functions.
