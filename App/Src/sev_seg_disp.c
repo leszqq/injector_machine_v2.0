@@ -271,13 +271,13 @@ error:
 
 enum sev_seg_status sev_seg_blink(enum sev_seg_digit digit){
 
-    if( (digit == NONE) && (base.blink_flag = false) ){
-        /* assert that digit which have been blinking before is now displayed */
+    if( (base.blinking_digit != NONE) && (base.blink_flag = true) ){
+        /* Turn on digit which have been blinking before */
         CHECK( write_digit(base.blinking_digit, get_digit(base.number, base.blinking_digit), false) == SEV_SEG_OK);
-    } else {
-        base.blinking_digit = digit;
-        base.blink_flag = true;
     }
+    base.blinking_digit = digit;
+    base.blink_flag = true;
+
 
     return SEV_SEG_OK;
 

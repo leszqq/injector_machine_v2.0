@@ -31,11 +31,12 @@
 #include "lcd_by_expander.h"
 #include "sev_seg_disp.h"
 #include <stdio.h>
+#include "encoder.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define LCD_FPS 20
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -113,10 +114,9 @@ int main(void)
 
   lcd_init(&hspi1, MCP_ADDR, CS_MCP_GPIO_Port, CS_MCP_Pin, res_tab);
   sev_seg_init(&hspi1, 1, CS_MAX_GPIO_Port, CS_MAX_Pin);
-  sev_seg_write(0);
+  sev_seg_write(9876);
   encoder_init(&htim1);
 
-  uint8_t enc_delta = 0;
 
   static char text[40] = {0};
   HAL_Delay(100);
@@ -126,25 +126,37 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   uint32_t timestamp = HAL_GetTick();
+  uint32_t timestamp2 = HAL_GetTick();
   enum sev_seg_digit dig = NONE;
   while (1)
   {
+      //HAL_Delay(100);
       HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-      if(lcd_process() != GPIO_EXPANDER_OK){
-          __NOP();
-      }
+
       if(sev_seg_process() != SEV_SEG_OK){
           __NOP();
       }
+      if(lcd_process() != GPIO_EXPANDER_OK){
+          __NOP();
+      }
 
 
-      if((HAL_GetTick() > timestamp + 500)){
+
+//      if((HAL_GetTick() > timestamp2 + 20)){
+//          timestamp2 = HAL_GetTick();
+//
+//          int16_t trans = encoder_get_transitions();
+//          if(trans != 0){
+//              snprintf(text, 40, "CNT: %d    ", encoder_get_transitions());
+//              lcd_write(text, 0, 0);
+//          }
+//      }
+
+      if((HAL_GetTick() > timestamp + 490)){
           timestamp = HAL_GetTick();
           dig++;
           dig %= 5;
           sev_seg_blink(dig);
-          snprintf(text, 40, "CNT: %d", encoder_get_transitions());
-          lcd_write(text, 0, 0);
       }
       HAL_GPIO_TogglePin(TEST_GPIO_Port, TEST_Pin);
     /* USER CODE END WHILE */

@@ -27,6 +27,11 @@ enum IC_register {
     GPIO = 0x09
 };
 
+enum buffer {
+    FIRST   =   0,
+    SECOND  =   1
+};
+
 struct Write_buffer {
     uint8_t                         amount_to_send;                                 // amount of writes ( register byte + data byte pairs)
     uint8_t                         queue[WRITE_BUFFER_SIZE];                       // bytes and their destination expander registers pairs
@@ -44,7 +49,8 @@ static struct GPIO_expander {
     GPIO_TypeDef*                   CS_port;
     uint16_t                        CS_pin;
     uint8_t                         device_address;
-    struct Write_buffer             write_buffer;
+    struct Write_buffer             write_buffers[2];
+    enum buffer                     active_buffer;          // buffer to which data should be push.
     struct Aux_tab                  aux_tab;
 } base;
 
@@ -97,12 +103,15 @@ void GPIO_expander_init(SPI_HandleTypeDef* hspi, uint8_t device_address, GPIO_Ty
 
     base.device_address = device_address;
 
-    /* initialize empty write buffer */
+    /* initialize empty write buffers  */
     struct Write_buffer buff = {
             .amount_to_send = 2,
             .queue = {device_address, OLAT, 0}
     };
-    base.write_buffer = buff;
+
+    base.write_buffers[0] = buff;
+    base.write_buffers[1] = buff;                   // this is copy, not refernce
+    base.active_buffer = FIRST;
 
     /* initialize auxiliary tab with zeros */
     struct Aux_tab aux_tab = {
@@ -121,7 +130,7 @@ void GPIO_expander_init(SPI_HandleTypeDef* hspi, uint8_t device_address, GPIO_Ty
 enum GPIO_expander_status GPIO_expander_FIFO_write(uint8_t byte)
 {
     /* assert that buffer is not full */
-    struct Write_buffer *buff = &base.write_buffer;
+    struct Write_buffer *buff = &base.write_buffers[(uint8_t) base.active_buffer];
     int next_index = buff->amount_to_send;
     if(next_index >= WRITE_BUFFER_SIZE - 1) return GPIO_EXPANDER_QUEUE_FULL;
 
@@ -144,7 +153,7 @@ enum GPIO_expander_status GPIO_expander_write(uint8_t byte)
 
 enum GPIO_expander_status GPIO_expander_process(){
     /* start DMA transmission if write buffer is not empty and SPI peripheral is not busy */
-    struct Write_buffer *buff = &base.write_buffer;
+    struct Write_buffer *buff = &base.write_buffers[(uint8_t) base.active_buffer];
     if(buff->amount_to_send > 2){
         if(base.hspi->State == HAL_SPI_STATE_BUSY) return GPIO_EXPANDER_BUSY;
 
@@ -153,6 +162,16 @@ enum GPIO_expander_status GPIO_expander_process(){
         status = HAL_SPI_Transmit_DMA(base.hspi, buff->queue, buff->amount_to_send);
 
         if(status == HAL_OK) buff->amount_to_send = 2;                                  // firt 2 bytes of queue are device and register addresses
+
+        /* alternate buffer to push data in */
+        switch(base.active_buffer){
+        case FIRST:
+            base.active_buffer = SECOND;
+            break;
+        case SECOND:
+            base.active_buffer = FIRST;
+            break;
+        }
         return resolve_status(status);
     } else {
         return GPIO_EXPANDER_OK;

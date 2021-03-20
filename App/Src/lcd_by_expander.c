@@ -28,7 +28,7 @@ enum command {
 
     TURN_OFF    = 0x08,
 
-    /* Choose entry mode and shift mode, tehn write logic sum as 1 command */
+    /* Choose entry mode and shift mode, then write logic sum as 1 command */
     ENTRY_INC   = 0x06,
     ENTRY_DEC   = 0x04,
     SHIFT_ON    = 0x05,
@@ -55,7 +55,7 @@ enum command {
 /* == variables == */
 
 static struct lcd {
-    struct Resolve_table res_tab;                       // contains info about connections between expander and lcd
+    struct Resolve_table    res_tab;                        // contains info about connections between expander and lcd
 
 } base;
 
@@ -237,6 +237,6 @@ enum GPIO_expander_status lcd_write(char *text, uint8_t row, uint8_t col)
 /* write commands and data from FIFO queue - start DMA based communication with LCD */
 enum GPIO_expander_status lcd_process()
 {
-    return GPIO_expander_process();
+        return GPIO_expander_process();
 }
 
