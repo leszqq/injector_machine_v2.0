@@ -99,7 +99,8 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
-  //GPIO_expander_init(&hspi1, MCP_ADDR, MCP_CS_GPIO_Port, MCP_CS_Pin);
+
+  HAL_Delay(500);
   struct Resolve_table res_tab = {
           .RW = GP5,
           .RS = GP6,
@@ -110,17 +111,14 @@ int main(void)
           .D7 = GP0
   };
 
-  HAL_Delay(500);
-
   lcd_init(&hspi1, MCP_ADDR, CS_MCP_GPIO_Port, CS_MCP_Pin, res_tab);
   sev_seg_init(&hspi1, 1, CS_MAX_GPIO_Port, CS_MAX_Pin);
-  sev_seg_write(5293);
+  sev_seg_write(0);
+  encoder_init(&htim1);
 
+  uint8_t enc_delta = 0;
 
-  char text[40] = {0};
-  snprintf(text, 40, "Size of char table:\n\n\n%d bytes.", sizeof(text));
-
-  lcd_write(text, 0, 0);
+  static char text[40] = {0};
   HAL_Delay(100);
 
   /* USER CODE END 2 */
@@ -139,11 +137,14 @@ int main(void)
           __NOP();
       }
 
-      if((HAL_GetTick() > timestamp + 1000)){
+
+      if((HAL_GetTick() > timestamp + 500)){
           timestamp = HAL_GetTick();
           dig++;
           dig %= 5;
           sev_seg_blink(dig);
+          snprintf(text, 40, "CNT: %d", encoder_get_transitions());
+          lcd_write(text, 0, 0);
       }
       HAL_GPIO_TogglePin(TEST_GPIO_Port, TEST_Pin);
     /* USER CODE END WHILE */
@@ -191,7 +192,9 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void read_encoder(int8_t delta){
 
+}
 
 
 /* USER CODE END 4 */
