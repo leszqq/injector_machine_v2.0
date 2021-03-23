@@ -19,6 +19,7 @@
 #include "main.h"
 #include "stm32f0xx_hal_i2c.h"
 
+
 /* === exported types === */
 enum EEPROM_status {
     EEPROM_OK,              // data read or written succesfuly

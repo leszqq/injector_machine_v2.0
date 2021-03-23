@@ -10,7 +10,7 @@
 #include "gpio_expander.h"
 #include <stdbool.h>
 #include "it_guard.h"
-
+#include "check_macros.h"
 
 /* == private defines == */
 #define WRITE_BUFFER_SIZE                       1440                                // adjust this if you like

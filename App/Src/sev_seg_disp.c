@@ -13,7 +13,7 @@
 #define BLINK_PERIOD    100U    // blink period in ms
 /* === private macros */
 
-#define CHECK(S) if(!(S)) goto error
+
 
 
 
@@ -24,6 +24,7 @@
 #include "spi.h"
 #include <string.h>
 #include "it_guard.h"
+#include "check_macros.h"
 
 /* private types */
 

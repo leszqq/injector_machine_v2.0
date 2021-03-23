@@ -17,7 +17,7 @@
 #include "lcd_by_expander.h"
 #include "spi.h"
 #include "gpio_expander.h"
-
+#include "check_macros.h"
 
 /* == private types == */
 

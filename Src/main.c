@@ -32,16 +32,27 @@
 #include "sev_seg_disp.h"
 #include <stdio.h>
 #include "encoder.h"
+#include "check_macros.h"
+#include "button.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define LCD_FPS 20
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MCP_ADDR 0x40                                               // GPIO expander
+
+/* coordinates of values on LCD display */
+#define LCD_OPEN_TIME_ROW       0
+#define LCD_OPEN_TIME_COL      17
+#define LCD_INJECTION_TIME_ROW  1
+#define LCD_INJECTION_TIME_COL  17
+#define LCD_COOLING_TIME_ROW    2
+#define LCD_COOLING_TIME_COL    17
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,13 +63,26 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+//struct fsm {
+//    int todo;
+//};
+//
+//struct user_menu{
+//    GPIO_TypeDef    enc_button_port;
+//    uint16_t        enc_button_pin;
+//    };
+//
+//static struct machine {
+//    struct fsm_t        fsm;            // finite state machine responsible for handling machine automation cycle
+//    struct user_menu    menu;           // user menu for setting periods or maximum periods of cycle stages
+//                                        // and cycle counter overflow value.
+//}base;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+enum GPIO_expander_status print_lcd_static_text();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -102,6 +126,8 @@ int main(void)
 
 
   HAL_Delay(500);
+
+  /* pin mapping for GPIO_Expander nad LCD */
   struct Resolve_table res_tab = {
           .RW = GP5,
           .RS = GP6,
@@ -111,15 +137,18 @@ int main(void)
           .D6 = GP1,
           .D7 = GP0
   };
-
   lcd_init(&hspi1, MCP_ADDR, CS_MCP_GPIO_Port, CS_MCP_Pin, res_tab);
-  sev_seg_init(&hspi1, 1, CS_MAX_GPIO_Port, CS_MAX_Pin);
-  sev_seg_write(9876);
-  encoder_init(&htim1);
 
+  sev_seg_init(&hspi1, 1, CS_MAX_GPIO_Port, CS_MAX_Pin);
+  sev_seg_write(1);
+
+  encoder_init(&htim1);
 
   static char text[40] = {0};
   HAL_Delay(100);
+
+  static struct Button but;
+  Button_init(&but, CP_ENC_BUTTON_GPIO_Port , CP_ENC_BUTTON_Pin, 30, GPIO_PIN_RESET);
 
   /* USER CODE END 2 */
 
@@ -128,10 +157,10 @@ int main(void)
   uint32_t timestamp = HAL_GetTick();
   uint32_t timestamp2 = HAL_GetTick();
   enum sev_seg_digit dig = NONE;
+
   while (1)
   {
-      //HAL_Delay(100);
-      HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+      //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 
       if(sev_seg_process() != SEV_SEG_OK){
           __NOP();
@@ -140,7 +169,8 @@ int main(void)
           __NOP();
       }
 
-
+      Button_process(&but);
+      if(Button_been_push(&but))    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 
 //      if((HAL_GetTick() > timestamp2 + 20)){
 //          timestamp2 = HAL_GetTick();
@@ -152,13 +182,13 @@ int main(void)
 //          }
 //      }
 
-      if((HAL_GetTick() > timestamp + 490)){
-          timestamp = HAL_GetTick();
-          dig++;
-          dig %= 5;
-          sev_seg_blink(dig);
-      }
-      HAL_GPIO_TogglePin(TEST_GPIO_Port, TEST_Pin);
+//      if((HAL_GetTick() > timestamp + 490)){
+//          timestamp = HAL_GetTick();
+//          dig++;
+//          dig %= 5;
+//          sev_seg_blink(dig);
+//      }
+//      HAL_GPIO_TogglePin(TEST_GPIO_Port, TEST_Pin);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -204,8 +234,20 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void read_encoder(int8_t delta){
+enum GPIO_expander_status print_static_lcd_txt()
+{
+    enum GPIO_expander_status status;
+    status = lcd_write("czas otwarcia:", LCD_OPEN_TIME_ROW, LCD_OPEN_TIME_COL);
+    CHECK(status == GPIO_EXPANDER_OK);
 
+    lcd_write("czas wtrysku:", LCD_INJECTION_TIME_ROW, LCD_INJECTION_TIME_COL);
+    CHECK(status == GPIO_EXPANDER_OK);
+
+    lcd_write("czas chlodzenia:", LCD_COOLING_TIME_ROW, LCD_COOLING_TIME_COL);
+    CHECK(status == GPIO_EXPANDER_OK);
+
+    error:
+    return status;
 }
 
 
