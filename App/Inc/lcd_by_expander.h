@@ -19,8 +19,9 @@
 #ifndef APP_INC_LCD_BY_EXPANDER_H_
 #define APP_INC_LCD_BY_EXPANDER_H_
 
-/* == includes == */
+/* == exported includes == */
 #include "main.h"
+#include "gpio_expander.h"
 /* == exported types == */
 
 /* use this enum to fill resolve table based on connections between GPIO expander and LCD.

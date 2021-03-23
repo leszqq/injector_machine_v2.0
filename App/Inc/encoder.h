@@ -18,13 +18,13 @@
  * @brief initialize encoder
  * @param htim  -   pointer to timer configured in encoder mode handle.
  */
-void encoder_init(TIM_HandleTypeDef* tim);
+void Encoder_init(TIM_HandleTypeDef* tim);
 
 /**
  * @brief get number of encoder transitions since last call of this function or init function
  * @retval  -   number of encoder transitions. It might be negative when turned counter-clockwise
  */
-int16_t encoder_get_transitions();
+int16_t Encoder_get_transitions();
 
 
 #endif /* APP_INC_ENCODER_H_ */

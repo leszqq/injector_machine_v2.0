@@ -19,7 +19,7 @@ static struct timer {
 /**
  * @brief initialize encoder
  */
-void encoder_init(TIM_HandleTypeDef* htim)
+void Encoder_init(TIM_HandleTypeDef* htim)
 {
     base.htim = htim;
 
@@ -32,7 +32,7 @@ void encoder_init(TIM_HandleTypeDef* htim)
  * @brief get number of encoder transitions since last call of this function or init function
  * @retval  -   number of encoder transitions. It might be negative when turned counter-clockwise
  */
-int16_t encoder_get_transitions()
+int16_t Encoder_get_transitions()
 {
     int16_t res = READ_REG(base.htim->Instance->CNT);
 
