@@ -18,6 +18,7 @@
 #include "spi.h"
 #include "gpio_expander.h"
 #include "check_macros.h"
+#include <assert.h>
 
 /* == private types == */
 
@@ -132,8 +133,30 @@ static enum GPIO_expander_status write_byte(uint8_t byte, enum write_mode mode)
     return status;
 }
 
+static uint8_t calc_address(uint8_t row, uint8_t col)
+{
+    uint8_t address = 0;
+    switch(row){
+    case 0:
+        address = ROW_0_ADDR;
+        break;
+    case 1:
+        address = ROW_1_ADDR;
+        break;
+    case 2:
+        address = ROW_2_ADDR;
+        break;
+    case 3:
+        address = ROW_3_ADDR;
+        break;
+    default:
+        assert(0);
+    }
+
+    return address + (col % 20);
+}
 /* API functions */
-enum GPIO_expander_status lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_address, GPIO_TypeDef *CS_pin_port, uint16_t CS_pin, struct Resolve_table resolve_tab)
+enum GPIO_expander_status Lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_address, GPIO_TypeDef *CS_pin_port, uint16_t CS_pin, struct Resolve_table resolve_tab)
 {
     enum GPIO_expander_status status = GPIO_EXPANDER_OK;
 
@@ -171,33 +194,16 @@ enum GPIO_expander_status lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_addre
 }
 
 
-enum GPIO_expander_status lcd_write(char *text, uint8_t row, uint8_t col)
+enum GPIO_expander_status Lcd_write(char *text, uint8_t row, uint8_t col)
 {
-    if(text == NULL) return GPIO_EXPANDER_ERROR;
+    assert(text != NULL);
 
     uint8_t i = 0;
     enum GPIO_expander_status status = GPIO_EXPANDER_OK;
 
     /* set row and column */
-    uint8_t address = 0;
-    switch(row){
-    case 0:
-        address = ROW_0_ADDR;
-        break;
-    case 1:
-        address = ROW_1_ADDR;
-        break;
-    case 2:
-        address = ROW_2_ADDR;
-        break;
-    case 3:
-        address = ROW_3_ADDR;
-        break;
-    default:
-        return GPIO_EXPANDER_ERROR;
-    }
+    uint8_t address = calc_address(row, col);
 
-    address += (col % 20);
     status = send_command(SET_ADDR | address, FIFO);
     if(status != GPIO_EXPANDER_OK) return status;
 
@@ -234,8 +240,26 @@ enum GPIO_expander_status lcd_write(char *text, uint8_t row, uint8_t col)
     return GPIO_EXPANDER_OK;
 }
 
+enum GPIO_expander_status Lcd_blink_on(uint8_t row, uint8_t col)
+{
+    uint8_t address = calc_address(row, col);
+    enum GPIO_expander_status status;
+    status = send_command(SET_ADDR | address, FIFO);
+    CHECK(status != GPIO_EXPANDER_OK);
+
+    return send_command(DISP_ON | CHAR_BLINK | CURSOR_ON, FIFO);
+
+    error:
+    return status;
+}
+
+enum GPIO_expander_status Lcd_blink_off()
+{
+    return send_command(DISP_ON, FIFO);
+}
+
 /* write commands and data from FIFO queue - start DMA based communication with LCD */
-enum GPIO_expander_status lcd_process()
+enum GPIO_expander_status Lcd_process()
 {
         return GPIO_expander_process();
 }

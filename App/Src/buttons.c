@@ -57,7 +57,7 @@ button_id Button_init(GPIO_TypeDef *port, uint16_t pin, uint8_t debouncing_time,
 
 bool Button_been_push(button_id id)
 {
-    assert(id < base.next_free_id - 1);
+    assert(id < base.next_free_id);
 
     /* read and clear been_push flag.*/
     struct Button *button = &base.buttons_tab[id];

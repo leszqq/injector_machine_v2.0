@@ -52,10 +52,10 @@ struct Resolve_table {
  * @param device_address    -   address of the expander dev
  * @param CS_pin_port       -   expander CS pin port
  * @param CS_pin            -   expander CS pin
- * @param pin_resolve_table -   table containing pin resolve TODO
+ * @param pin_resolve_table -   table containing pin resolve
  * @retval enum status
  */
-enum GPIO_expander_status lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_address, GPIO_TypeDef *CS_pin_port, uint16_t CS_pin, struct Resolve_table resolve_tab);
+enum GPIO_expander_status Lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_address, GPIO_TypeDef *CS_pin_port, uint16_t CS_pin, struct Resolve_table resolve_tab);
 
 /**
  * @brief push text to write on display at specified row and column in FIFO queue
@@ -63,9 +63,24 @@ enum GPIO_expander_status lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_addre
  * @param row               -   row to write
  * @param col               -   collumn to write
  */
-enum GPIO_expander_status lcd_write(char *text, uint8_t row, uint8_t col);
+enum GPIO_expander_status Lcd_write(char *text, uint8_t row, uint8_t col);
+
+/**
+ * @brief push command to make LCD field blinking in FIFO queue
+ * @param row               -   row of blinking field
+ * @param col               -   col of blinking field
+ * @retval enum status
+ */
+enum GPIO_expander_status Lcd_blink_on(uint8_t row, uint8_t col);
+
+/**
+ * @brief push command to turn off LCD field blinking in FIFO queue
+ * @retval enum status
+ */
+enum GPIO_expander_status Lcd_blink_off();
+
 
 /* execute tasks stored in FIFO queue - start DMA based communication with LCD */
-enum GPIO_expander_status lcd_process();
+enum GPIO_expander_status Lcd_process();
 
 #endif /* APP_INC_LCD_BY_EXPANDER_H_ */

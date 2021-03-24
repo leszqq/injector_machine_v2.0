@@ -40,7 +40,7 @@ enum sev_seg_status {
  * @param CS_pin    -   MCU pin to which CS pin of MAX7219 is connected
  * @retval status
  */
-enum sev_seg_status sev_seg_init(SPI_HandleTypeDef* hspi, uint32_t timeout, GPIO_TypeDef* CS_port, uint16_t CS_pin);
+enum sev_seg_status Sev_seg_init(SPI_HandleTypeDef* hspi, uint32_t timeout, GPIO_TypeDef* CS_port, uint16_t CS_pin);
 
 
 /**
@@ -48,7 +48,7 @@ enum sev_seg_status sev_seg_init(SPI_HandleTypeDef* hspi, uint32_t timeout, GPIO
  * @param number - number to display
  * @retval status
  */
-enum sev_seg_status sev_seg_write(uint16_t number);
+enum sev_seg_status Sev_seg_write(uint16_t number);
 
 
 /* enum type for selecting blinking digit */
@@ -64,14 +64,14 @@ enum sev_seg_digit {
  * @param digit - NONE, UNITS, TENS, HUNDREDS or THOUSANDS
  * @retval status
  */
-enum sev_seg_status sev_seg_blink(enum sev_seg_digit digit);
+enum sev_seg_status Sev_seg_blink(enum sev_seg_digit digit);
 
 
 /**
  * @brief put this in main loop for blinking timing
  * @retval status
  */
-enum sev_seg_status sev_seg_process();
+enum sev_seg_status Sev_seg_process();
 
 
 // TODO: analyze IT cases and if IT there should be IT gaurds macros inside static polling write fuction. ???

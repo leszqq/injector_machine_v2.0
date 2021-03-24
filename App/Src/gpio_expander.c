@@ -33,7 +33,7 @@ enum buffer {
 };
 
 struct Write_buffer {
-    uint8_t                         amount_to_send;                                 // amount of writes ( register byte + data byte pairs)
+    uint16_t                        amount_to_send;                                 // amount of writes ( register byte + data byte pairs)
     uint8_t                         queue[WRITE_BUFFER_SIZE];                       // bytes and their destination expander registers pairs
 };
 

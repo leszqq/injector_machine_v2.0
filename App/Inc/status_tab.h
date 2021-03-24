@@ -10,11 +10,13 @@
 
 #include "gpio_expander.h"
 #include "sev_seg_disp.h"
+#include "eeprom_ic.h"
 
 /* table for preserving error codes */
 struct Status_tab {
     enum GPIO_expander_status   GPIO_exp_stat;
     enum sev_seg_status         sev_seg_stat;
+    enum EEPROM_status          eeprom_stat;
 };
 
 #endif /* APP_INC_STATUS_TAB_H_ */

@@ -18,7 +18,6 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <buttons.h>
 #include "main.h"
 #include "dma.h"
 #include "i2c.h"
@@ -34,18 +33,14 @@
 #include <stdio.h>
 #include "encoder.h"
 #include "check_macros.h"
+#include "counter.h"
+#include "time_table.h"
+#include "menu.h"
+#include "status_tab.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
-
-
-enum machine_states {
-    // TODO
-    DUMMY_STATE
-};
-
 
 /* USER CODE END PTD */
 
@@ -53,7 +48,6 @@ enum machine_states {
 /* USER CODE BEGIN PD */
 #define MCP_ADDR 0x40                                               // GPIO expander
 
-/* positions
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -70,22 +64,13 @@ enum machine_states {
 //
 
 
-
-
-
-/* state machine for maintaining machine cycle */
-static struct Fsm {
-    enum machine_states         state;
-};
-
 /* singleton machine instance */
-//static struct Machine {
-//    struct Fsm                  fsm;            // finite state machine responsible for handling machine automation cycle
-//    struct Time_table           cycle_times;    // contains periods for time dependent machine cycle steps
-//    struct Menu                 user_menu;      // user menu for setting periods or maximum periods of cycle stages
-//                                                // and cycle counter overflow value.
-//    struct Status_tab           status_table;   // table for preserving error codes
-//} base;
+static struct Machine {
+    struct Fsm                  fsm;            // finite state machine responsible for handling machine automation cycle
+    struct Time_table           cycle_times;    // contains periods for time dependent machine cycle steps
+    struct Counter              counter;
+    struct Status_tab           status_table;   // table for preserving error codes
+} base;
 
 
 /* USER CODE END PV */
@@ -93,7 +78,7 @@ static struct Fsm {
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-enum GPIO_expander_status print_lcd_static_text();
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -148,15 +133,20 @@ int main(void)
           .D6 = GP1,
           .D7 = GP0
   };
-  lcd_init(&hspi1, MCP_ADDR, CS_MCP_GPIO_Port, CS_MCP_Pin, res_tab);
 
-  sev_seg_init(&hspi1, 1, CS_MAX_GPIO_Port, CS_MAX_Pin);
-  sev_seg_write(1);
+  enum EEPROM_status temp;
+  temp = EEPROM_init(&hi2c2);
+  temp = EEPROM_read_setups(&base.cycle_times, &base.counter.max_value);
+
+  base.status_table.GPIO_exp_stat = Lcd_init(&hspi1, MCP_ADDR, CS_MCP_GPIO_Port, CS_MCP_Pin, res_tab);
+  CHECK(base.status_table.GPIO_exp_stat == GPIO_EXPANDER_OK);
+
+  base.status_table.sev_seg_stat = Sev_seg_init(&hspi1, 1, CS_MAX_GPIO_Port, CS_MAX_Pin);
+  CHECK(base.status_table.sev_seg_stat == SEV_SEG_OK);
 
   Encoder_init(&htim1);
 
-  static char text[40] = {0};
-  HAL_Delay(100);
+  Menu_init(&base.cycle_times, &base.status_table, &base.fsm.state, &base.counter);
 
   /* USER CODE END 2 */
 
@@ -164,19 +154,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   uint32_t timestamp = HAL_GetTick();
   uint32_t timestamp2 = HAL_GetTick();
-  enum sev_seg_digit dig = NONE;
+  //enum sev_seg_digit dig = NONE;
+  //Lcd_write("XDDD", 1, 1);
 
   while (1)
   {
-      //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+      //if(Button_been_push(2)) HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 
-      if(sev_seg_process() != SEV_SEG_OK){
-          __NOP();
-      }
-      if(lcd_process() != GPIO_EXPANDER_OK){
-          __NOP();
-      }
-
+      Menu_process();
+      //Sev_seg_process();
 
 //      if((HAL_GetTick() > timestamp2 + 20)){
 //          timestamp2 = HAL_GetTick();
@@ -192,13 +178,16 @@ int main(void)
 //          timestamp = HAL_GetTick();
 //          dig++;
 //          dig %= 5;
-//          sev_seg_blink(dig);
+//          Sev_seg_blink(dig);
 //      }
 //      HAL_GPIO_TogglePin(TEST_GPIO_Port, TEST_Pin);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
+  error:
+  while(1){};
+
   /* USER CODE END 3 */
 }
 

@@ -11,7 +11,10 @@
 /* === exported includes === */
 #include "gpio_expander.h"
 #include "status_tab.h"
+#include "time_table.h"
 #include "encoder.h"
+#include "counter.h"
+#include "fsm.h"
 
 /* === exported defines === */
 /* change these defines according to application */
@@ -29,7 +32,7 @@
  * @param time_tab              - pointer to time table containing cycle defining periods
  * @param status_tab            - pointer to tab where error codes are preserved
  */
-void menu_init(struct Time_table *time_tab, struct Status_tab *status_tab);
+void Menu_init(struct Time_table *time_tab, struct Status_tab *status_tab, enum fsm_state *machine_state, struct Counter *counter);
 
-void menu_process();
+void Menu_process();
 #endif /* APP_INC_MENU_H_ */

@@ -18,6 +18,7 @@
 #include "i2c.h"
 #include "main.h"
 #include "stm32f0xx_hal_i2c.h"
+#include "time_table.h"
 
 
 /* === exported types === */
@@ -33,25 +34,23 @@ enum EEPROM_status {
  * @param *hi2c     -   pointer to i2c handle, to which IC is connected.
  * @retval enum EEPROM_status
  */
-enum EEPROM_status EEPROM_init(I2C_HandleTypeDef* hi2c, uint32_t timeout);
+enum EEPROM_status EEPROM_init(I2C_HandleTypeDef* hi2c);
 
 /**
- * @brieg read up to 8 bytes from EEPROM IC in polling mode.
- * @param addr      -   memory address, it must be the multiply of 8 to assert that all 8 bytes will be read properly.
- * @param p_data    -   pointer to array where data will be stored.
- * @param size      -   number of bytes to read.  Must be less than 8.
+ * @brief read saved setups from eeprom memory
+ * @param time_tab          - pointer to table in which cycle times will be stored
+ * @param max_cnt_cycles    - pointer to variable where maximum cycle count will be stored
  * @retval enum EEPROM_status
  */
-enum EEPROM_status EEPROM_read(uint8_t addr, uint8_t *p_data, uint8_t size);
+enum EEPROM_status EEPROM_read_setups(struct Time_table *time_tab, uint16_t *max_cnt_value);
 
 /**
- * @brief write up to 8 bytes to EEPROM IC in polling mode.
- * @param addr      -   memory address, it must be the multiply of 8 to assert that all 8 bytes will be written properly.
- * @param p_data    -   pointer to array where data to write is stored.
- * @param size      -   number of bytes form p_data array to write to EEPROM IC. Must be less than 8.
- * @retval enum EEPROM_status
+ * @brief write setups to eeprom memory
+ * @param time_tab          - pointer to table in which cycle times are stored.
+ * @param max_cnt_value     - maximum value of cycle counter
+ * @retval enum EEPROM status
  */
-enum EEPROM_status EEPROM_write(uint8_t addr, uint8_t *p_data, uint8_t size);
+enum EEPROM_status EEPROM_write_setups(struct Time_table *time_tab, uint16_t max_cnt_value);
 
 
 

@@ -171,7 +171,7 @@ uint8_t get_digit(uint16_t number, enum sev_seg_digit digit){
 /* === API function === */
 
 /* initialization function */
-enum sev_seg_status sev_seg_init(SPI_HandleTypeDef* hspi, uint32_t timeout, GPIO_TypeDef* CS_port, uint16_t CS_pin){
+enum sev_seg_status Sev_seg_init(SPI_HandleTypeDef* hspi, uint32_t timeout, GPIO_TypeDef* CS_port, uint16_t CS_pin){
 
     /* initialize base struct */
     base.number = 0;
@@ -215,7 +215,7 @@ error:
  * @param number - number to display
  * @retval status
  */
-enum sev_seg_status sev_seg_write(uint16_t number){
+enum sev_seg_status Sev_seg_write(uint16_t number){
 
     if(number > 9999){
         base.status = SEV_SEG_ERROR;
@@ -270,9 +270,9 @@ error:
 }
 
 
-enum sev_seg_status sev_seg_blink(enum sev_seg_digit digit){
+enum sev_seg_status Sev_seg_blink(enum sev_seg_digit digit){
 
-    if( (base.blinking_digit != NONE) && (base.blink_flag = true) ){
+    if((base.blink_flag = true) ){
         /* Turn on digit which have been blinking before */
         CHECK( write_digit(base.blinking_digit, get_digit(base.number, base.blinking_digit), false) == SEV_SEG_OK);
     }
@@ -287,7 +287,7 @@ error:
 }
 
 
-enum sev_seg_status sev_seg_process(){
+enum sev_seg_status Sev_seg_process(){
 
     /* blinking */
     if(base.blinking_digit != NONE){
