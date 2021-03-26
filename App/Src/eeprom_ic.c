@@ -58,7 +58,7 @@ enum EEPROM_status EEPROM_read_setups(struct Time_table *time_tab, uint16_t *max
 
     uint8_t temp_tab[SETUP_MEM_SIZE];
     stat = HAL_I2C_Mem_Read(base.hi2c, IC_ADDR, SETUP_ADDR, 1, temp_tab, SETUP_MEM_SIZE, TIMEOUT);
-    CHECK(stat == HAL_OK);
+    CHECK(stat == HAL_OK, "");
 
     /* create uint16_t values based on MSB and LSB bytes read from memory */
     time_tab->open_time = (temp_tab[OPEN_TIME_INDEX] << 8) + temp_tab[OPEN_TIME_INDEX + 1];

@@ -17,11 +17,11 @@
 
 /* coordinates of values on LCD display */
 #define LCD_OPEN_TIME_ROW       0
-#define LCD_OPEN_TIME_COL      17
+#define LCD_OPEN_TIME_COL       16
 #define LCD_INJECTION_TIME_ROW  1
-#define LCD_INJECTION_TIME_COL  17
+#define LCD_INJECTION_TIME_COL  16
 #define LCD_COOLING_TIME_ROW    2
-#define LCD_COOLING_TIME_COL    17
+#define LCD_COOLING_TIME_COL    16
 
 #define LCD_ROW_LEN            21
 
@@ -34,14 +34,16 @@
 #define SAVE_BUTTON             2
 
 #define TIME_STEP               100
-#define MAX_TIME_VALUE          40000
+#define MAX_TIME_VALUE          32000
 #define MAX_MAX_CYCLE_CNT_VALUE 9999
 
 /* === private macros === */
 /* format value in miliseconds to print as seconds */
-#define FORMAT_TIME(TIME) (TIME > 10000 ? "%d.%d" : " %d.%d")
+#define FORMAT_TIME(TIME)   (TIME > 10000 ? "%d.%d" : " %d.%d")
 
 /* === private types === */
+
+
 
 /* user menu entries */
 enum menu_entry {
@@ -62,7 +64,6 @@ enum menu_entry {
 static struct Menu{
     button_id                   buttons[NUM_BUTTONS];
     struct Time_table           *cycle_times;
-    struct Status_tab           *status_tab;
     enum fsm_state              *machine_state;
     struct Counter              *counter;
     uint32_t                    timestamp;
@@ -70,53 +71,69 @@ static struct Menu{
     char                        aux_text[LCD_ROW_LEN];              // auxiliary char buffer
     enum menu_entry             entry;                              // selected menu entry
     bool                        setups_saved;                       // true if setups saved in EEPROM are consistent with these on display
+
+    enum EEPROM_status eeprom_stat;
+    enum GPIO_expander_status gpio_exp_stat;
+    enum sev_seg_status sev_seg_stat;
 } base;
 
 /* === private functions === */
 
 static enum GPIO_expander_status print_static_lcd_txt()
 {
-    enum GPIO_expander_status status;
+    snprintf(base.aux_text, LCD_ROW_LEN, "czas otwarcia:   %d.%d", base.cycle_times->open_time / 1000, base.cycle_times->open_time % 1000);
+    base.gpio_exp_stat = Lcd_write(base.aux_text, LCD_OPEN_TIME_ROW, 0);
+    CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "");
 
-    snprintf(base.aux_text, LCD_ROW_LEN, "cz. otwarcia:    %d.%d", base.cycle_times->open_time / 1000, base.cycle_times->open_time % 1000);
-    status = Lcd_write(base.aux_text, LCD_OPEN_TIME_ROW, 0);
-    CHECK(status == GPIO_EXPANDER_OK);
+    snprintf(base.aux_text, LCD_ROW_LEN, "czas wtrysku:    %d.%d", base.cycle_times->injection_time / 1000, base.cycle_times->injection_time % 1000);
+    base.gpio_exp_stat = Lcd_write(base.aux_text, LCD_INJECTION_TIME_ROW, 0);
+    CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "");
 
-    snprintf(base.aux_text, LCD_ROW_LEN, "cz. wtrysku:     %d.%d", base.cycle_times->injection_time / 1000, base.cycle_times->injection_time % 1000);
-    status = Lcd_write(base.aux_text, LCD_INJECTION_TIME_ROW, 0);
-    CHECK(status == GPIO_EXPANDER_OK);
+    snprintf(base.aux_text, LCD_ROW_LEN, "czas chlodzenia: %d.%d", base.cycle_times->cooling_time / 1000, base.cycle_times->cooling_time % 1000);
+    base.gpio_exp_stat = Lcd_write(base.aux_text, LCD_COOLING_TIME_ROW, 0);
+    CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "");
 
-    snprintf(base.aux_text, LCD_ROW_LEN, "cz. chlodzenia:  %d.%d", base.cycle_times->cooling_time / 1000, base.cycle_times->cooling_time % 1000);
-    status = Lcd_write(base.aux_text, LCD_COOLING_TIME_ROW, 0);
-    CHECK(status == GPIO_EXPANDER_OK);
-
-    return status;
+    DBG_LOG("Exiting with gpio_exp_stat = %d", base.gpio_exp_stat);
+    return base.gpio_exp_stat;
 
     error:
-    return status;
+    return base.gpio_exp_stat;
 }
 
-static uint16_t limit_val(uint16_t val, uint16_t low_limit, uint16_t high_val)
+static uint16_t limit_val(int16_t val, uint16_t low_limit, uint16_t high_val)
 {
     if(val < 0) return 0;
     if(val > high_val) return high_val;
     return val;
 }
+
+/* update displayed time value on lcd and allgin blinking cursor*/
+static enum GPIO_expander_status update_lcd_time(uint16_t val, uint8_t row, uint8_t col)
+{
+    snprintf(base.aux_text, 5, FORMAT_TIME(val), val / 1000, val % 1000);
+    base.gpio_exp_stat = Lcd_write(base.aux_text, row, col);
+    CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "gpio_exp_status: %d", base.gpio_exp_stat);
+
+    base.gpio_exp_stat = Lcd_blink_on(row, col + 3);
+    CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "gpio_exp_status: %d", base.gpio_exp_stat);
+
+    return GPIO_EXPANDER_OK;
+    error:
+    return base.gpio_exp_stat;
+}
 /* === API functions === */
 
-void Menu_init(struct Time_table *time_tab, struct Status_tab *status_tab, enum fsm_state *machine_state, struct Counter *counter)
+void Menu_init(struct Time_table *time_tab, enum fsm_state *machine_state, struct Counter *counter)
 {
-    enum sev_seg_status temp_sev_seg_status = SEV_SEG_OK;
-    enum GPIO_expander_status temp_exp_status = GPIO_EXPANDER_OK;
+    enum sev_seg_status sev_seg_status = SEV_SEG_OK;
+    enum GPIO_expander_status gpio_exp_status = GPIO_EXPANDER_OK;
 
     /* init base struct */
-    assert(time_tab != NULL);
-    assert(status_tab != NULL);
-    assert(machine_state != NULL);
-    assert(counter != NULL);
+    CHECK(time_tab != NULL, "");
+    CHECK(machine_state != NULL, "");
+    CHECK(counter != NULL, "");
 
     base.cycle_times = time_tab;
-    base.status_tab = status_tab;
     base.machine_state = machine_state;
     base.counter = counter;
     base.entry = NO_ENTRY;
@@ -129,21 +146,18 @@ void Menu_init(struct Time_table *time_tab, struct Status_tab *status_tab, enum 
 
     /* print static part of menu text on lcd */
 
-    temp_exp_status = print_static_lcd_txt();
-    CHECK(temp_exp_status == GPIO_EXPANDER_OK);
+    gpio_exp_status = print_static_lcd_txt();
+    CHECK(gpio_exp_status == GPIO_EXPANDER_OK, "");
 
     /* display data on seven segment display */
-
-    temp_sev_seg_status = Sev_seg_write(0);
-    CHECK(temp_sev_seg_status == SEV_SEG_OK);
+    sev_seg_status = Sev_seg_write(0, SEV_SEG_NO_REFRESH);
+    CHECK(sev_seg_status == SEV_SEG_OK, "");
 
     /* temp code */
     base.timestamp = HAL_GetTick();
     return;
 
     error:
-    if(temp_exp_status != GPIO_EXPANDER_OK) base.status_tab->GPIO_exp_stat = temp_exp_status;
-    if(temp_sev_seg_status != SEV_SEG_OK) base.status_tab->sev_seg_stat = temp_sev_seg_status;
         return;
 }
 
@@ -160,13 +174,13 @@ void Menu_process()
         if(Button_been_push(base.buttons[ENCODER_BUTTON])){
             if(base.entry == NO_ENTRY){
                 /* display maximum cycle count on seven segment display when entering menu */
-                Sev_seg_write(base.counter->max_value);
+                Sev_seg_write(base.counter->max_value, SEV_SEG_NO_REFRESH);
                 base.entry = OPEN_TIME;
             } else if(base.entry == CYCLE_CNT_UNITS) {
                 /* After last menu entry, continue iterating through options and display maximum cycle count if setups not saved. If saved, exit setup menu and display actual cycle count. */
                 if(base.setups_saved){
                     base.entry = NO_ENTRY;
-                    Sev_seg_write(base.counter->value);
+                    Sev_seg_write(base.counter->value, SEV_SEG_REFRESH);
                 } else {
                     base.entry = OPEN_TIME;
                 }
@@ -182,109 +196,107 @@ void Menu_process()
                     break;
                 case OPEN_TIME:
                     Sev_seg_blink(NONE);
-                    Lcd_blink_on(LCD_OPEN_TIME_ROW, 1);
+                    Lcd_blink_on(LCD_OPEN_TIME_ROW, LCD_OPEN_TIME_COL + 3);
                     break;
                 case INJECTION_TIME:
-                    Lcd_blink_on(LCD_INJECTION_TIME_ROW, 1);
+                    Lcd_blink_on(LCD_INJECTION_TIME_ROW, LCD_INJECTION_TIME_COL + 3);
                     break;
                 case COOLING_TIME:
-                    Lcd_blink_on(LCD_COOLING_TIME_ROW, 1);
+                    Lcd_blink_on(LCD_COOLING_TIME_ROW, LCD_COOLING_TIME_COL + 3);
                     break;
                 case CYCLE_CNT_THOUSANDS:
                     Lcd_blink_off();
                     Sev_seg_blink(THOUSANDS);
                     break;
                 case CYCLE_CNT_HUNDREDS:
+                    Sev_seg_write(base.counter->max_value, SEV_SEG_REFRESH);
                     Sev_seg_blink(HUNDREDS);
                     break;
                 case CYCLE_CNT_TENS:
+                    Sev_seg_write(base.counter->max_value, SEV_SEG_REFRESH);
                     Sev_seg_blink(TENS);
                     break;
                 case CYCLE_CNT_UNITS:
+                    Sev_seg_write(base.counter->max_value, SEV_SEG_REFRESH);
                     Sev_seg_blink(UNITS);
                     break;
                 default:
-                    assert(0);
+                    CHECK(0, "");
             }
         }
 
         /* cnt reset button. Reset number of counted cycles to zero.*/
         if(Button_been_push(base.buttons[CNT_RES_BUTTON])){
             base.counter->value = 0;
-            Sev_seg_write(0);
+            Sev_seg_write(0, SEV_SEG_REFRESH);
         }
 
         /* setup save button. Save setups value to EEPROM */
         if(Button_been_push(base.buttons[SAVE_BUTTON]) && !base.setups_saved){
             base.setups_saved = true;
-            base.status_tab->eeprom_stat = EEPROM_write_setups(base.cycle_times, base.counter->max_value);
+            base.eeprom_stat = EEPROM_write_setups(base.cycle_times, base.counter->max_value);
+            CHECK(base.eeprom_stat == EEPROM_ERROR, "");
+
+            base.sev_seg_stat = Sev_seg_write(base.counter->value, SEV_SEG_REFRESH);
+            CHECK(base.sev_seg_stat == SEV_SEG_OK, "0");
+
+            base.entry = NO_ENTRY;
+            base.gpio_exp_stat = Lcd_blink_off();
+            CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "");
         }
 
-        /* modify cycle times and cycle counter maximum value by encoder */
+        /* Encoder. Modify cycle times and cycle counter maximum value based on encoder transitions */
 
-        uint8_t enc_transitions = Encoder_get_transitions();
-        uint8_t new_val;
-        if(enc_transitions != 0){
+        int16_t enc_trans = Encoder_get_transitions();
+        if(enc_trans != 0){
             base.setups_saved = false;
-            if(base.entry == OPEN_TIME || base.entry == INJECTION_TIME || base.entry == COOLING_TIME){
-
-            }
-
             switch(base.entry){
+            /* update value in memory and on display*/
+            case NO_ENTRY:
+                break;
             case OPEN_TIME:
-                base.cycle_times->open_time = limit_val( enc_transitions + base.cycle_times->open_time, 0, MAX_TIME_VALUE);
-                /* lcd blink in here */
-                Lcd_blink_on(LCD_OPEN_TIME_ROW, LCD_OPEN_TIME_COL-1);
+                base.cycle_times->open_time = limit_val(base.cycle_times->open_time + TIME_STEP*enc_trans, 0, MAX_TIME_VALUE);
+                update_lcd_time(base.cycle_times->open_time, LCD_OPEN_TIME_ROW, LCD_OPEN_TIME_COL);
+                break;
+            case INJECTION_TIME:
+                base.cycle_times->injection_time = limit_val(base.cycle_times->injection_time + TIME_STEP*enc_trans, 0 , MAX_TIME_VALUE);
+                update_lcd_time(base.cycle_times->injection_time, LCD_INJECTION_TIME_ROW, LCD_INJECTION_TIME_COL);
+                break;
+            case COOLING_TIME:
+                base.cycle_times->cooling_time = limit_val(base.cycle_times->cooling_time + TIME_STEP*enc_trans, 0, MAX_TIME_VALUE);
+                update_lcd_time(base.cycle_times->cooling_time, LCD_COOLING_TIME_ROW, LCD_COOLING_TIME_COL);
+                break;
+            case CYCLE_CNT_THOUSANDS:
+                base.counter->max_value = limit_val(base.counter->max_value + 1000*enc_trans, 0, MAX_MAX_CYCLE_CNT_VALUE);
+                Sev_seg_write(base.counter->max_value, SEV_SEG_REFRESH);
+                break;
+            case CYCLE_CNT_HUNDREDS:
+                base.counter->max_value = limit_val(base.counter->max_value + 100*enc_trans, 0, MAX_MAX_CYCLE_CNT_VALUE);
+                Sev_seg_write(base.counter->max_value, SEV_SEG_REFRESH);
+                break;
+            case CYCLE_CNT_TENS:
+                base.counter->max_value = limit_val(base.counter->max_value + 10*enc_trans, 0, MAX_MAX_CYCLE_CNT_VALUE);
+                Sev_seg_write(base.counter->max_value, SEV_SEG_REFRESH);
+                break;
+            case CYCLE_CNT_UNITS:
+                base.counter->max_value = limit_val(base.counter->max_value + 1*enc_trans, 0, MAX_MAX_CYCLE_CNT_VALUE);
+                Sev_seg_write(base.counter->max_value, SEV_SEG_REFRESH);
+                break;
+            default:
+                CHECK(0, "Shouldn't get here");
             }
+
+            CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "");
         }
-//            base.setups_saved = false;
-
-//        switch(base.entry){
-//        case NONE:
-//        default:
-//            Sev_seg_blink(NONE);
-//            break;
-//        case OPEN_TIME:
-//            Sev_seg_write(base.counter->max_value);
-//            base.cycle_times->open_time = limit_val( enc_transitions + base.cycle_times->open_time, 0, MAX_TIME_VALUE);
-//            snprintf(base.aux_text, 4, FORMAT_TIME(), base.cycle_times->open_time / 1000, base.cycle_times->open_time % 1000);
-//            Lcd_write(base.aux_text, LCD_OPEN_TIME_ROW, LCD_OPEN_TIME_COL-1);
-//            break;
-//        case INJECTION_TIME:
-//            base.cycle_times->injection_time = limit_val( enc_transitions + base.cycle_times->injection_time, 0, MAX_TIME_VALUE);
-//            break;
-//        case COOLING_TIME:
-//            base.cycle_times->cooling_time = limit_val(enc_transitions + base.cycle_times->cooling_time, 0, MAX_TIME_VALUE);
-//            break;
-//        case CYCLE_CNT_THOUSANDS:
-//            Sev_seg_write(base.counter->max_value);
-//            Sev_seg_blink(THOUSANDS);
-//            base.counter->max_value = limit_val(enc_transitions*1000 + base.counter->max_value, 0, MAX_MAX_CYCLE_CNT_VALUE);
-//            break;
-//        case CYCLE_CNT_HUNDREDS:
-//            Sev_seg_blink(HUNDREDS);
-//            base.counter-> max_value = limit_val(enc_transitions*100 + base.counter->max_value, 0, MAX_MAX_CYCLE_CNT_VALUE);
-//            break;
-//        case CYCLE_CNT_TENS:
-//            Sev_seg_blink(TENS);
-//            base.counter-> max_value = limit_val(enc_transitions*10 + base.counter->max_value, 0, MAX_MAX_CYCLE_CNT_VALUE);
-//            break;
-//        case CYCLE_CNT_UNITS:
-//            Sev_seg_blink(UNITS);
-//            base.counter-> max_value = limit_val(enc_transitions + base.counter->max_value, 0, MAX_MAX_CYCLE_CNT_VALUE);
-//            break;
-//        }
-
-//        static uint16_t temp;
-//        Sev_seg_write(temp++);
-//        static char text[5];
-//        snprintf(text, 5, "%d", temp);
-//        Lcd_write(text, LCD_OPEN_TIME_ROW, LCD_OPEN_TIME_COL - 2);
     }
-    Lcd_process();
-    Sev_seg_process();
+
+    base.sev_seg_stat = Sev_seg_process();
+    CHECK(base.sev_seg_stat == SEV_SEG_OK, "");
+    base.gpio_exp_stat = Lcd_process();
+    CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "");
 
 
-
-    // TODO check which button been push and do actions accordingly
+    return;
+    error:
+    return;
 }

@@ -21,7 +21,10 @@
 #ifndef APP_INC_SEV_SEG_DISP_H_
 #define APP_INC_SEV_SEG_DISP_H_
 
+/* === exported includes === */
+#include <stdbool.h>
 
+/* === exported types === */
 /* display status */
 enum sev_seg_status {
     SEV_SEG_OK,
@@ -31,7 +34,13 @@ enum sev_seg_status {
     SEV_SEG_TIMEOUT
 };
 
+enum sev_seg_refresh {
+    SEV_SEG_REFRESH = 0,
+    SEV_SEG_NO_REFRESH
+};
 
+
+/* === exported functions === */
 /**
  * @brief Initialization function. After initialization, there is "0" on display.
  * @param hspi      -   pointer to SPI handle
@@ -48,7 +57,7 @@ enum sev_seg_status Sev_seg_init(SPI_HandleTypeDef* hspi, uint32_t timeout, GPIO
  * @param number - number to display
  * @retval status
  */
-enum sev_seg_status Sev_seg_write(uint16_t number);
+enum sev_seg_status Sev_seg_write(uint16_t number, enum sev_seg_refresh refresh);
 
 
 /* enum type for selecting blinking digit */

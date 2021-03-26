@@ -23,6 +23,7 @@
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -37,6 +38,7 @@
 #include "time_table.h"
 #include "menu.h"
 #include "status_tab.h"
+#include "check_macros.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,10 +60,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-//struct fsm {
-//    int todo;
-//};
-//
+
 
 
 /* singleton machine instance */
@@ -69,7 +68,6 @@ static struct Machine {
     struct Fsm                  fsm;            // finite state machine responsible for handling machine automation cycle
     struct Time_table           cycle_times;    // contains periods for time dependent machine cycle steps
     struct Counter              counter;
-    struct Status_tab           status_table;   // table for preserving error codes
 } base;
 
 
@@ -118,6 +116,7 @@ int main(void)
   MX_SPI1_Init();
   MX_I2C2_Init();
   MX_TIM1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -134,59 +133,62 @@ int main(void)
           .D7 = GP0
   };
 
-  enum EEPROM_status temp;
-  temp = EEPROM_init(&hi2c2);
-  temp = EEPROM_read_setups(&base.cycle_times, &base.counter.max_value);
 
-  base.status_table.GPIO_exp_stat = Lcd_init(&hspi1, MCP_ADDR, CS_MCP_GPIO_Port, CS_MCP_Pin, res_tab);
-  CHECK(base.status_table.GPIO_exp_stat == GPIO_EXPANDER_OK);
+  enum EEPROM_status eeprom_stat = EEPROM_init(&hi2c2);
+  DBG_LOG("EEPROM init: %d", eeprom_stat);
 
-  base.status_table.sev_seg_stat = Sev_seg_init(&hspi1, 1, CS_MAX_GPIO_Port, CS_MAX_Pin);
-  CHECK(base.status_table.sev_seg_stat == SEV_SEG_OK);
+  eeprom_stat = EEPROM_read_setups(&base.cycle_times, &base.counter.max_value);
+  DBG_LOG("EEPROM read: %d", eeprom_stat);
+
+  /* set default values if eeprom read failed */
+  if(eeprom_stat != EEPROM_OK){
+      base.counter.max_value = 63;
+      base.cycle_times.open_time = 2000;
+      base.cycle_times.injection_time = 7000;
+      base.cycle_times.cooling_time = 10000;
+  }
+
+  /* initialzie displays */
+  enum GPIO_expander_status gpio_exp_stat = Lcd_init(&hspi1, MCP_ADDR, CS_MCP_GPIO_Port, CS_MCP_Pin, res_tab);
+  DBG_LOG("Lcd_init: %d", gpio_exp_stat);
+
+  enum sev_seg_status sev_seg_stat = Sev_seg_init(&hspi1, 1, CS_MAX_GPIO_Port, CS_MAX_Pin);
+  DBG_LOG("Sev_seg_init: %d", sev_seg_stat);
 
   Encoder_init(&htim1);
 
-  Menu_init(&base.cycle_times, &base.status_table, &base.fsm.state, &base.counter);
+  /* initialize user menu */
+  Menu_init(&base.cycle_times, &base.fsm.state, &base.counter);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint32_t timestamp = HAL_GetTick();
-  uint32_t timestamp2 = HAL_GetTick();
-  //enum sev_seg_digit dig = NONE;
-  //Lcd_write("XDDD", 1, 1);
 
+
+  uint32_t timestamp = HAL_GetTick();
   while (1)
   {
       //if(Button_been_push(2)) HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 
+      /* machine process here */
+      // TODO
+
+      /* handle user menu interface */
       Menu_process();
-      //Sev_seg_process();
 
-//      if((HAL_GetTick() > timestamp2 + 20)){
-//          timestamp2 = HAL_GetTick();
-//
-//          int16_t trans = encoder_get_transitions();
-//          if(trans != 0){
-//              snprintf(text, 40, "CNT: %d    ", encoder_get_transitions());
-//              lcd_write(text, 0, 0);
-//          }
-//      }
 
-//      if((HAL_GetTick() > timestamp + 490)){
-//          timestamp = HAL_GetTick();
-//          dig++;
-//          dig %= 5;
-//          Sev_seg_blink(dig);
-//      }
-//      HAL_GPIO_TogglePin(TEST_GPIO_Port, TEST_Pin);
+      if(HAL_GetTick() > timestamp + 500){
+          timestamp = HAL_GetTick();
+          HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+      }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
-  error:
-  while(1){};
+
+  //while(1){};
 
   /* USER CODE END 3 */
 }
@@ -199,6 +201,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -223,6 +226,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV16;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2;
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_SYSCLK;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }

@@ -111,7 +111,7 @@ static enum sev_seg_status write_reg(enum registers reg, uint8_t byte){
 
     HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_RESET);
     base.status = resolve_status(HAL_SPI_Transmit(base.hspi, base.aux_tab, 2, base.timeout));
-    CHECK(base.status == SEV_SEG_OK);
+    CHECK(base.status == SEV_SEG_OK, "");
     HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_SET);
 
     IT_GUARD_END
@@ -142,9 +142,9 @@ static enum sev_seg_status put_in_buff(enum registers reg, uint8_t byte){
 static enum sev_seg_status write_digit(enum sev_seg_digit digit_pos, uint8_t digit, bool blank){
 
     if(blank){
-        CHECK(put_in_buff( (enum registers) digit_pos, SEG_BLANK) == SEV_SEG_OK);
+        CHECK(put_in_buff( (enum registers) digit_pos, SEG_BLANK) == SEV_SEG_OK, "");
     } else {
-        CHECK(put_in_buff( (enum registers) digit_pos, digit) == SEV_SEG_OK);
+        CHECK(put_in_buff( (enum registers) digit_pos, digit) == SEV_SEG_OK, "");
     }
 
     return SEV_SEG_OK;
@@ -176,7 +176,7 @@ enum sev_seg_status Sev_seg_init(SPI_HandleTypeDef* hspi, uint32_t timeout, GPIO
     /* initialize base struct */
     base.number = 0;
     base.blinking_digit = NONE;
-    base.blink_flag = true;
+    base.blink_flag = false;
     base.hspi = hspi;
 
     base.CS_port = CS_port;
@@ -191,17 +191,17 @@ enum sev_seg_status Sev_seg_init(SPI_HandleTypeDef* hspi, uint32_t timeout, GPIO
     base.status = SEV_SEG_OK;
 
     /* write configuration sequence to MAX7219 IC */
-    CHECK(write_reg(SHUTDOWN, 0x01) == SEV_SEG_OK);
-    CHECK(write_reg(DEC_MODE, 0xFF) == SEV_SEG_OK);              // decoding mode on
-    CHECK(write_reg(INTENSITY, 0x02) == SEV_SEG_OK);
-    CHECK(write_reg(SCAN_LIM, 0x03) == SEV_SEG_OK);
-    CHECK(write_reg(DISP_TEST, 0x00) == SEV_SEG_OK);
+    CHECK(write_reg(SHUTDOWN, 0x01) == SEV_SEG_OK, "");
+    CHECK(write_reg(DEC_MODE, 0xFF) == SEV_SEG_OK, "");              // decoding mode on
+    CHECK(write_reg(INTENSITY, 0x02) == SEV_SEG_OK, "");
+    CHECK(write_reg(SCAN_LIM, 0x03) == SEV_SEG_OK, "");
+    CHECK(write_reg(DISP_TEST, 0x00) == SEV_SEG_OK, "");
 
-    /* set display blank */
-    CHECK(write_reg(DIGIT_3, SEG_BLANK) == SEV_SEG_OK);
-    CHECK(write_reg(DIGIT_2, SEG_BLANK) == SEV_SEG_OK);
-    CHECK(write_reg(DIGIT_1, SEG_BLANK) == SEV_SEG_OK);
-    CHECK(write_reg(DIGIT_0, SEG_BLANK) == SEV_SEG_OK);
+    /* set 0 on display*/
+    CHECK(write_reg(DIGIT_3, SEG_BLANK) == SEV_SEG_OK, "");
+    CHECK(write_reg(DIGIT_2, SEG_BLANK) == SEV_SEG_OK, "");
+    CHECK(write_reg(DIGIT_1, SEG_BLANK) == SEV_SEG_OK, "");
+    CHECK(write_reg(DIGIT_0, 0) == SEV_SEG_OK, "");
 
     return SEV_SEG_OK;
 
@@ -212,10 +212,11 @@ error:
 
 /**
  * @brief write number to seven segment display
- * @param number - number to display
+ * @param number    - number to display
+ * @param refresh   - if true, refresh entire display. Else, update only changed digit.
  * @retval status
  */
-enum sev_seg_status Sev_seg_write(uint16_t number){
+enum sev_seg_status Sev_seg_write(uint16_t number, enum sev_seg_refresh refresh){
 
     if(number > 9999){
         base.status = SEV_SEG_ERROR;
@@ -230,8 +231,9 @@ enum sev_seg_status Sev_seg_write(uint16_t number){
     if(blank_flag && (temp != 0) ) blank_flag = false;
 
     /* check if new thousands digit is different from already displayed */
-    if(temp != get_digit(base.number, THOUSANDS) ){
-        CHECK( write_digit(DIGIT_3, temp, blank_flag) == SEV_SEG_OK );
+
+    if( ( refresh == SEV_SEG_REFRESH ) || (temp != get_digit(base.number, THOUSANDS)) ){
+        CHECK( write_digit(DIGIT_3, temp, blank_flag) == SEV_SEG_OK, "");
     }
 
     /* hundreds digit */
@@ -239,24 +241,24 @@ enum sev_seg_status Sev_seg_write(uint16_t number){
     if(blank_flag && (temp != 0) ) blank_flag = false;
 
     /* check if new hundreds digit is different from already displayed */
-    if(temp != get_digit(base.number, HUNDREDS) ){
-        CHECK( write_digit(DIGIT_2, temp, blank_flag) == SEV_SEG_OK );
+    if( ( refresh == SEV_SEG_REFRESH ) || (temp != get_digit(base.number, HUNDREDS)) ){
+        CHECK( write_digit(DIGIT_2, temp, blank_flag) == SEV_SEG_OK, "");
     }
 
     temp = get_digit(number, TENS);
     if(blank_flag && (temp != 0) ) blank_flag = false;
 
     /* check if new tens digit is different from already displayed */
-    if(temp != get_digit(base.number, TENS) ){
-        CHECK( write_digit(DIGIT_1, temp, blank_flag) == SEV_SEG_OK );
+    if( ( refresh == SEV_SEG_REFRESH ) || (temp != get_digit(base.number, TENS)) ){
+        CHECK( write_digit(DIGIT_1, temp, blank_flag) == SEV_SEG_OK, "" );
     }
 
     temp = get_digit(number, UNITS);
     blank_flag = false;                                                     // always display unit digit
 
     /* check if new unit digit is different from already displayed */
-    if(temp != get_digit(base.number, UNITS) ){
-        CHECK( write_digit(DIGIT_0, temp, blank_flag) == SEV_SEG_OK );
+    if( ( refresh == SEV_SEG_REFRESH ) || (temp != get_digit(base.number, UNITS)) ){
+        CHECK( write_digit(DIGIT_0, temp, blank_flag) == SEV_SEG_OK, "");
     }
 
     /* update currently displayed number copy in base struct */
@@ -274,7 +276,7 @@ enum sev_seg_status Sev_seg_blink(enum sev_seg_digit digit){
 
     if((base.blink_flag = true) ){
         /* Turn on digit which have been blinking before */
-        CHECK( write_digit(base.blinking_digit, get_digit(base.number, base.blinking_digit), false) == SEV_SEG_OK);
+        CHECK( write_digit(base.blinking_digit, get_digit(base.number, base.blinking_digit), false) == SEV_SEG_OK, "");
     }
     base.blinking_digit = digit;
     base.blink_flag = true;
@@ -296,10 +298,10 @@ enum sev_seg_status Sev_seg_process(){
 
             if(base.blink_flag){
                 /* set segment blank */
-                CHECK(write_digit(base.blinking_digit, 0, true) == SEV_SEG_OK);         // digit value set to 0 because it is blank anyway
+                CHECK(write_digit(base.blinking_digit, 0, true) == SEV_SEG_OK, "");         // digit value set to 0 because it is blank anyway
             } else {
                 /* display digit */
-                CHECK( write_digit(base.blinking_digit, get_digit(base.number, base.blinking_digit), false ) == SEV_SEG_OK);
+                CHECK( write_digit(base.blinking_digit, get_digit(base.number, base.blinking_digit), false ) == SEV_SEG_OK, "");
             }
 
             base.blink_flag = !base.blink_flag;
@@ -309,8 +311,9 @@ enum sev_seg_status Sev_seg_process(){
 
     /* send next data from buffer */
     if(base.buff.amount_to_send != 0){
-        CHECK(write_reg(base.buff.r_b_pairs[base.buff.amount_to_send-1].reg,
-                        base.buff.r_b_pairs[base.buff.amount_to_send-1].byte) == SEV_SEG_OK);
+        base.status = write_reg(base.buff.r_b_pairs[base.buff.amount_to_send-1].reg,
+                        base.buff.r_b_pairs[base.buff.amount_to_send-1].byte);
+        WARN(base.status == SEV_SEG_OK, "gpio_exp_state: %d", base.status);
 
         base.buff.amount_to_send--;
         if(base.status == SEV_SEG_FULL) base.status = SEV_SEG_OK;

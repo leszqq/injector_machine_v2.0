@@ -32,7 +32,7 @@
  * @param time_tab              - pointer to time table containing cycle defining periods
  * @param status_tab            - pointer to tab where error codes are preserved
  */
-void Menu_init(struct Time_table *time_tab, struct Status_tab *status_tab, enum fsm_state *machine_state, struct Counter *counter);
+void Menu_init(struct Time_table *time_tab, enum fsm_state *machine_state, struct Counter *counter);
 
 void Menu_process();
 #endif /* APP_INC_MENU_H_ */

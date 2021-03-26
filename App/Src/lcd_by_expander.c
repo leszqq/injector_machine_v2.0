@@ -245,9 +245,9 @@ enum GPIO_expander_status Lcd_blink_on(uint8_t row, uint8_t col)
     uint8_t address = calc_address(row, col);
     enum GPIO_expander_status status;
     status = send_command(SET_ADDR | address, FIFO);
-    CHECK(status != GPIO_EXPANDER_OK);
+    CHECK(status == GPIO_EXPANDER_OK, "");
 
-    return send_command(DISP_ON | CHAR_BLINK | CURSOR_ON, FIFO);
+    return send_command(DISP_ON | CHAR_BLINK, FIFO);
 
     error:
     return status;
