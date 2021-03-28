@@ -1,5 +1,6 @@
 # injector_machine_v2.0
 This repository contain source files for injector molding machine controller based on STM32F072RB microcontroller.
+Majority of source code is located in App folder.
 
 ## project purpose
 
