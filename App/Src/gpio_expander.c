@@ -164,22 +164,24 @@ enum GPIO_expander_status GPIO_expander_process(){
         HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_RESET);
         status = HAL_SPI_Transmit_DMA(base.hspi, buff->queue, buff->amount_to_send);
 
-        if(status == HAL_OK) buff->amount_to_send = 2;                                  // firt 2 bytes of queue are device and register addresses
+        if(status == HAL_OK)
+        {
+            buff->amount_to_send = 2;                                  // firt 2 bytes of queue are device and register addresses
 
-        /* alternate buffer to push data in */
-        switch(base.active_buffer){
-        case FIRST:
-            base.active_buffer = SECOND;
-            break;
-        case SECOND:
-            base.active_buffer = FIRST;
-            break;
+            /* alternate buffer to push data in */
+            switch(base.active_buffer){
+            case FIRST:
+                base.active_buffer = SECOND;
+                break;
+            case SECOND:
+                base.active_buffer = FIRST;
+                break;
+            }
         }
         return resolve_status(status);
     } else {
         return GPIO_EXPANDER_OK;
     }
-    return GPIO_EXPANDER_ERROR;
 }
 
 void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi){

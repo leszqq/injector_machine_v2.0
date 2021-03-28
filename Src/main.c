@@ -612,7 +612,7 @@ void auto_mode_process()
             error("przekr. czas cyklu");
 
             base.fsm.state = ERR;
-            DBG_LOG("Watchdog overflow.")
+            DBG_LOG("Watchdog overflow.");
             DBG_LOG("fsm_state:%d->ERR", base.fsm.state);
         }
     }
