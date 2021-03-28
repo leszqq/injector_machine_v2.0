@@ -174,7 +174,7 @@ void Menu_process()
         if(Button_been_push(base.buttons[ENCODER_BUTTON])){
             if(base.entry == NO_ENTRY){
                 /* display maximum cycle count on seven segment display when entering menu */
-                Sev_seg_write(base.counter->max_value, SEV_SEG_NO_REFRESH);
+                Sev_seg_write(base.counter->max_value, SEV_SEG_REFRESH);
                 base.entry = OPEN_TIME;
             } else if(base.entry == CYCLE_CNT_UNITS) {
                 /* After last menu entry, continue iterating through options and display maximum cycle count if setups not saved. If saved, exit setup menu and display actual cycle count. */
@@ -235,9 +235,12 @@ void Menu_process()
         if(Button_been_push(base.buttons[SAVE_BUTTON]) && !base.setups_saved){
             base.setups_saved = true;
             base.eeprom_stat = EEPROM_write_setups(base.cycle_times, base.counter->max_value);
-            CHECK(base.eeprom_stat == EEPROM_ERROR, "");
+            CHECK(base.eeprom_stat == EEPROM_OK, "");
 
             base.sev_seg_stat = Sev_seg_write(base.counter->value, SEV_SEG_REFRESH);
+            CHECK(base.sev_seg_stat == SEV_SEG_OK, "0");
+
+            base.sev_seg_stat = Sev_seg_blink(NONE);
             CHECK(base.sev_seg_stat == SEV_SEG_OK, "0");
 
             base.entry = NO_ENTRY;
@@ -293,7 +296,7 @@ void Menu_process()
     base.sev_seg_stat = Sev_seg_process();
     CHECK(base.sev_seg_stat == SEV_SEG_OK, "");
     base.gpio_exp_stat = Lcd_process();
-    CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "");
+    CHECK(base.gpio_exp_stat == GPIO_EXPANDER_OK, "Lcd process error.");
 
 
     return;

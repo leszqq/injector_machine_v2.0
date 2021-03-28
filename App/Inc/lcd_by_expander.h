@@ -63,7 +63,7 @@ enum GPIO_expander_status Lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_addre
  * @param row               -   row to write
  * @param col               -   collumn to write
  */
-enum GPIO_expander_status Lcd_write(char *text, uint8_t row, uint8_t col);
+enum GPIO_expander_status Lcd_write(const char *text, uint8_t row, uint8_t col);
 
 /**
  * @brief push command to make LCD field blinking in FIFO queue

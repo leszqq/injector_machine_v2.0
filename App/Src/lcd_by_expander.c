@@ -194,7 +194,7 @@ enum GPIO_expander_status Lcd_init(SPI_HandleTypeDef* hspi, uint8_t device_addre
 }
 
 
-enum GPIO_expander_status Lcd_write(char *text, uint8_t row, uint8_t col)
+enum GPIO_expander_status Lcd_write(const char *text, uint8_t row, uint8_t col)
 {
     assert(text != NULL);
 

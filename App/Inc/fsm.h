@@ -11,7 +11,13 @@
 /* === exported types === */
 
 enum fsm_state {
-    FSM_DUMMY_STATE
+    STOP = 0,
+    PAUSE,
+    FORM_CLOSING,
+    INJECTION,
+    COOLING,
+    FORM_OPENING,
+    ERR
 };
 
 /* state machine for maintaining machine cycle */

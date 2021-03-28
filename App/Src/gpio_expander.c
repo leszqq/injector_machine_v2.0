@@ -155,7 +155,10 @@ enum GPIO_expander_status GPIO_expander_process(){
     /* start DMA transmission if write buffer is not empty and SPI peripheral is not busy */
     struct Write_buffer *buff = &base.write_buffers[(uint8_t) base.active_buffer];
     if(buff->amount_to_send > 2){
-        if(base.hspi->State == HAL_SPI_STATE_BUSY) return GPIO_EXPANDER_BUSY;
+        if(base.hspi->State == HAL_SPI_STATE_BUSY){
+            WARN(0, "GPIO_expander SPI busy");
+            return GPIO_EXPANDER_BUSY;
+        }
 
         HAL_StatusTypeDef status = HAL_OK;
         HAL_GPIO_WritePin(base.CS_port, base.CS_pin, GPIO_PIN_RESET);
