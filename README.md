@@ -23,7 +23,7 @@ This repository contain source files for injector molding machine controller bas
    transitions. Polling strategy has been chosen for  reading position of machine parts to minimize probability of false reading due to electromagnetic interferences.
    
    Command line interface based on UART transmission have been developed for debugging and servicing purposes. One can connect computer
-   to device using USB interface to see informations about error codes, time elapsed from reset and current execition line are printed in terminal, for example:
+   to device using USB interface to see informations about error codes, time elapsed from reset and current execition line. For example:
    
    ![alt text](https://github.com/leszqq/injector_machine_v2.0/blob/master/resources/cli_scr.png "CLI")
 
